@@ -1905,6 +1905,26 @@ Formula: **2^(32 − CIDR) − 2**
   },
 ];
 
+const PRACTICE_EXAM_QS = (() => {
+  const qs = [
+    ...WEEKS[0].quiz,
+    ...WEEKS[1].quiz.slice(0, 15),
+    ...WEEKS[2].quiz.slice(0, 9),
+    ...WEEKS[3].quiz.slice(0, 9),
+    ...WEEKS[4].quiz.slice(0, 17),
+    ...WEEKS[5].quiz.slice(0, 13),
+    ...WEEKS[6].quiz,
+  ];
+  const domainMap = [
+    ...Array(21).fill("Domain 1: Networking Concepts"),
+    ...Array(18).fill("Domain 2: Implementation"),
+    ...Array(17).fill("Domain 3: Operations"),
+    ...Array(13).fill("Domain 4: Security"),
+    ...Array(21).fill("Domain 5: Troubleshooting"),
+  ];
+  return qs.map((q, i) => ({ ...q, domain: domainMap[i] }));
+})();
+
 const LESSON_EXAMPLES = {
   osi: `### More Examples
 - **Layer 1 example:** A user has no link light. Swap the patch cable, try a known-good switch port, and check the NIC status.
@@ -2481,7 +2501,7 @@ export default function App() {
             </div>
             <nav style={{display:"flex",flexDirection:"column",gap:4,padding:"16px 12px",flex:1}}>
               {[["dashboard","🏠","Dashboard"],["weeks","📚","Course"],["flashcards","🃏","Flashcards"],
-                ["subnet","🧮","Subnet Lab"],["badges","🎖️","Medals"]
+                ["practice","📝","Practice Exam"],["subnet","🧮","Subnet Lab"],["badges","🎖️","Medals"]
               ].map(([id,icon,lbl])=>(
                 <button key={id} onClick={()=>goNav(id)}
                   style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,
@@ -2530,6 +2550,7 @@ export default function App() {
           {showFlash      && <FlashView cards={WEEKS[weekIdx].flashcards} title={WEEKS[weekIdx].title} onXP={flashXP} onBack={goBack}/>}
 
           {screen==="flashcards" && <AllFlashView weeks={WEEKS} onXP={flashXP}/>}
+          {screen==="practice"   && <PracticeExamView questions={PRACTICE_EXAM_QS} onBack={goNav} progress={progress}/>}
           {screen==="subnet"     && <SubnetView progress={progress} onSolve={subnetXP}/>}
           {screen==="badges"     && <BadgeView earned={progress.badges}/>}
         </div>
@@ -2566,6 +2587,18 @@ function DashView({progress,pct,doneLessons,totalLessons,nav}) {
         <div style={{height:"100%",background:"linear-gradient(90deg,#00d4ff,#7c3aed)",borderRadius:4,width:`${pct}%`,transition:"width .5s"}}/>
       </div>
     </div>
+    <SectionHdr>Exam Details</SectionHdr>
+    <div style={{background:"#131720",borderRadius:12,border:"1px solid #1e2535",padding:"16px 22px",marginBottom:24,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
+      {[["Exam","CompTIA N10-009","#00d4ff"],["Questions","90 (MCQ + PBQs)","#059669"],
+        ["Time","90 minutes","#f59e0b"],["Passing Score","720 / 900","#dc2626"]
+      ].map(([lbl,val,color])=>(
+        <div key={lbl} style={{textAlign:"center"}}>
+          <div style={{color,fontWeight:700,fontSize:16,marginBottom:4}}>{val}</div>
+          <div style={{color:"#6b7280",fontSize:11,letterSpacing:1}}>{lbl.toUpperCase()}</div>
+        </div>
+      ))}
+    </div>
+    <button onClick={()=>nav("practice")} style={{width:"100%",background:"linear-gradient(135deg,#00d4ff,#059669)",border:"none",borderRadius:12,padding:"16px",color:"white",fontWeight:700,fontSize:14,marginBottom:24,cursor:"pointer"}}>Take Practice Exam →</button>
     <SectionHdr>Quick Access</SectionHdr>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12,marginBottom:4}}>
       {[["📖","Course","weeks","#00d4ff"],["🃏","Flashcards","flashcards","#7c3aed"],
@@ -3214,6 +3247,172 @@ function BadgeView({earned}) {
         </div>
       </div>
     ))}
+  </>;
+}
+
+function PracticeExamView({questions,onBack,progress}) {
+  const [phase,setPhase]=React.useState("start");
+  const [examQuestions,setExamQuestions]=React.useState([]);
+  const [current,setCurrent]=React.useState(0);
+  const [answers,setAnswers]=React.useState([]);
+  const [timeLeft,setTimeLeft]=React.useState(5400);
+  const [score,setScore]=React.useState(0);
+
+  const startExam=()=>{
+    const shuffled=[...questions].sort(()=>Math.random()-0.5);
+    setExamQuestions(shuffled);
+    setAnswers(Array(shuffled.length).fill(null));
+    setTimeLeft(5400);
+    setPhase("exam");
+  };
+
+  React.useEffect(()=>{
+    if(phase!=="exam" || timeLeft<=0) return;
+    const timer=setTimeout(()=>setTimeLeft(t=>t-1),1000);
+    if(timeLeft===1) submitExam();
+    return ()=>clearTimeout(timer);
+  },[phase,timeLeft]);
+
+  const submitExam=()=>{
+    const correct=answers.filter((a,i)=>a!==null && a===examQuestions[i].answer).length;
+    const sc=Math.round(100+(correct/examQuestions.length)*800);
+    setScore(sc);
+    setPhase("results");
+  };
+
+  const formatTime=()=>{
+    const m=Math.floor(timeLeft/60), s=timeLeft%60;
+    return `${m}:${String(s).padStart(2,"0")}`;
+  };
+
+  const selectAnswer=(optionIdx)=>{
+    const newAnswers=[...answers];
+    newAnswers[current]=optionIdx;
+    setAnswers(newAnswers);
+  };
+
+  const domainBreakdown=()=>{
+    const domains={};
+    examQuestions.forEach((q,i)=>{
+      if(!domains[q.domain]) domains[q.domain]={correct:0,total:0};
+      domains[q.domain].total++;
+      if(answers[i]===q.answer) domains[q.domain].correct++;
+    });
+    return Object.entries(domains).sort((a,b)=>a[0].localeCompare(b[0]));
+  };
+
+  if(phase==="start") return <>
+    <BackBtn onClick={()=>onBack("dashboard")}/>
+    <h1 style={T.title}>CompTIA Network+ N10-009</h1>
+    <p style={T.sub}>Full-length practice exam</p>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:14,marginBottom:28}}>
+      {[["Exam","CompTIA N10-009"],["Questions","90 MCQ + PBQs"],["Time","90 minutes"],["Passing","720 / 900"]]
+        .map(([lbl,val])=>(
+        <div key={lbl} style={{background:"#131720",borderRadius:12,border:"1px solid #1e2535",padding:"14px",textAlign:"center"}}>
+          <div style={{color:"#00d4ff",fontWeight:700,fontSize:14}}>{val}</div>
+          <div style={{color:"#6b7280",fontSize:11,marginTop:4}}>{lbl}</div>
+        </div>
+      ))}
+    </div>
+    <button onClick={startExam} style={{width:"100%",background:"linear-gradient(135deg,#00d4ff,#059669)",border:"none",borderRadius:12,padding:"16px",color:"white",fontWeight:700,fontSize:16,cursor:"pointer"}}>Begin Exam</button>
+  </>;
+
+  if(phase==="exam") {
+    const q=examQuestions[current];
+    return <>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,padding:"16px",background:"#131720",borderRadius:12,border:timeLeft<300?"2px solid #dc2626":"1px solid #1e2535"}}>
+        <div style={{display:"flex",gap:20}}>
+          <div style={{color:timeLeft<300?"#dc2626":"#00d4ff",fontWeight:900,fontSize:20}}>{formatTime()}</div>
+          <div style={{color:"#6b7280"}}>Q {current+1} / {examQuestions.length}</div>
+        </div>
+        <button onClick={submitExam} style={{background:"#059669",border:"none",borderRadius:8,padding:"8px 16px",color:"white",fontWeight:700,cursor:"pointer"}}>Submit Exam</button>
+      </div>
+      <div style={{background:"#131720",borderRadius:12,border:"1px solid #1e2535",padding:"22px",marginBottom:24}}>
+        <p style={{fontSize:16,color:"#e2e8f0",marginBottom:20,lineHeight:1.6}}>{q.q}</p>
+        <div style={{display:"grid",gap:12}}>
+          {q.options.map((opt,i)=>(
+            <button key={i} onClick={()=>selectAnswer(i)}
+              style={{background:answers[current]===i?"#1a2035":"#0c0f16",border:answers[current]===i?"2px solid #00d4ff":"1px solid #1e2535",borderRadius:10,padding:"14px 16px",color:answers[current]===i?"#00d4ff":"#e2e8f0",textAlign:"left",cursor:"pointer",fontSize:14}}>
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:12,marginBottom:24}}>
+        <button onClick={()=>setCurrent(c=>Math.max(0,c-1))} disabled={current===0} style={{flex:1,background:"#131720",border:"1px solid #1e2535",borderRadius:8,padding:"12px",color:"#6b7280",cursor:current===0?"default":"pointer",opacity:current===0?0.5:1}}>← Prev</button>
+        <button onClick={()=>setCurrent(c=>Math.min(examQuestions.length-1,c+1))} disabled={current===examQuestions.length-1} style={{flex:1,background:"#131720",border:"1px solid #1e2535",borderRadius:8,padding:"12px",color:"#6b7280",cursor:current===examQuestions.length-1?"default":"pointer",opacity:current===examQuestions.length-1?0.5:1}}>Next →</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(30px,1fr))",gap:6}}>
+        {examQuestions.map((q,i)=>(
+          <button key={i} onClick={()=>setCurrent(i)}
+            style={{width:"100%",aspectRatio:"1",borderRadius:6,border:"1px solid",background:i===current?"#00d4ff":"#131720",color:i===current?"#000":"#9ca3af",borderColor:answers[i]!==null?"#00d4ff":"#1e2535",fontWeight:700,fontSize:12,cursor:"pointer"}}>
+            {i+1}
+          </button>
+        ))}
+      </div>
+    </>;
+  }
+
+  if(phase==="results") {
+    const correct=answers.filter((a,i)=>a!==null && a===examQuestions[i].answer).length;
+    const passed=score>=720;
+    return <>
+      <BackBtn onClick={()=>setPhase("start")}/>
+      <h1 style={T.title}>Exam Results</h1>
+      <div style={{background:passed?"#06351950":"#dc262650",borderRadius:12,border:`2px solid ${passed?"#059669":"#dc2626"}`,padding:"28px",marginBottom:28,textAlign:"center"}}>
+        <div style={{fontSize:56,fontWeight:900,color:passed?"#059669":"#dc2626",marginBottom:12}}>{score}</div>
+        <div style={{fontSize:20,fontWeight:700,color:passed?"#059669":"#dc2626",marginBottom:4}}>{passed?"PASS":"FAIL"}</div>
+        <div style={{color:"#6b7280",fontSize:14}}>Passing score: 720</div>
+      </div>
+      <div style={{background:"#131720",borderRadius:12,border:"1px solid #1e2535",padding:"18px",marginBottom:24}}>
+        <div style={{color:"#9ca3af",fontSize:12,marginBottom:8}}>BREAKDOWN</div>
+        {domainBreakdown().map(([domain,{correct,total}])=>(
+          <div key={domain} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <span style={{color:"#6b7280",fontSize:13}}>{domain}</span>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:120,height:6,background:"#1e2535",borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",background:"#00d4ff",width:`${(correct/total)*100}%`}}/>
+              </div>
+              <span style={{color:"#9ca3af",fontSize:13,width:50,textAlign:"right"}}>{correct}/{total}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:12}}>
+        <button onClick={()=>setPhase("review")} style={{flex:1,background:"#131720",border:"1px solid #00d4ff",borderRadius:12,padding:"14px",color:"#00d4ff",fontWeight:700,cursor:"pointer"}}>Review Answers</button>
+        <button onClick={startExam} style={{flex:1,background:"linear-gradient(135deg,#00d4ff,#059669)",border:"none",borderRadius:12,padding:"14px",color:"white",fontWeight:700,cursor:"pointer"}}>Retake Exam</button>
+      </div>
+    </>;
+  }
+
+  if(phase==="review") return <>
+    <BackBtn onClick={()=>setPhase("results")}/>
+    <h1 style={T.title}>Review Answers</h1>
+    {examQuestions.map((q,i)=>{
+      const userAnswer=answers[i];
+      const correct=userAnswer===q.answer;
+      return (
+        <div key={i} style={{background:"#131720",borderRadius:12,border:correct?"1px solid #06351950":"1px solid #dc262650",padding:"18px",marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:12}}>
+            <div style={{flex:1}}>
+              <div style={{color:"#9ca3af",fontSize:12,marginBottom:8}}>Question {i+1}</div>
+              <div style={{color:"#e2e8f0",fontSize:14,marginBottom:12}}>{q.q}</div>
+            </div>
+            <div style={{color:correct?"#059669":"#dc2626",fontWeight:700,fontSize:12,padding:"4px 12px",background:correct?"#06351950":"#dc262650",borderRadius:6,whiteSpace:"nowrap",marginLeft:12}}>
+              {correct?"✓ Correct":"✗ Incorrect"}
+            </div>
+          </div>
+          <div style={{background:"#0c0f16",borderRadius:8,padding:"14px",marginBottom:12}}>
+            {q.options.map((opt,oi)=>(
+              <div key={oi} style={{color:oi===q.answer?"#059669":oi===userAnswer?"#dc2626":"#6b7280",fontWeight:oi===q.answer||oi===userAnswer?700:400,padding:"8px 0"}}>
+                {oi===q.answer?`✓ ${opt}`:oi===userAnswer?`✗ ${opt}`:opt}
+              </div>
+            ))}
+          </div>
+          <div style={{color:"#9ca3af",fontSize:13,lineHeight:1.6}}>{q.explanation}</div>
+        </div>
+      );
+    })}
   </>;
 }
 
