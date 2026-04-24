@@ -2326,6 +2326,7 @@ export default function App() {
   const [subscreen, setSubscreen] = useState(null);     // "lesson"|"quiz"|"flash"
   const [lessonIdx, setLessonIdx] = useState(null);
   const [notif, setNotif] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // mobile sidebar toggle
   const startTimeRef = useRef(null);
 
   // ── helpers ──────────────────────────────────
@@ -2442,6 +2443,51 @@ export default function App() {
         a:hover{opacity:.8;}
         ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-track{background:#0f1117;}
         ::-webkit-scrollbar-thumb{background:#374151;border-radius:3px;}
+        /* Mobile responsive sidebar */
+        .sidebar { transition: transform 0.3s ease; pointer-events: auto; }
+        .sidebar-close-btn { display: none; }
+        .mobile-menu-btn { display: none; }
+        .sidebar-overlay { display: none; }
+        @media (max-width: 767px) {
+          .sidebar { 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+            z-index: 9000;
+            height: 100vh;
+          }
+          .sidebar-closed { 
+            transform: translateX(-100%);
+            pointer-events: none;
+          }
+          .sidebar-open { 
+            transform: translateX(0);
+          }
+          .sidebar-close-btn { display: block !important; }
+          .mobile-menu-btn { display: flex !important; }
+          .sidebar-overlay { 
+            display: block; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(0,0,0,0.5);
+            z-index: 8000;
+          }
+        }
+        @media (min-width: 768px) {
+          .sidebar,
+          .sidebar-closed,
+          .sidebar-open {
+            transform: none !important;
+            position: sticky !important;
+            pointer-events: auto !important;
+          }
+          .mobile-menu-btn,
+          .sidebar-close-btn,
+          .sidebar-overlay { display: none !important; }
+        }
       `}</style>
 
       {notif && (
@@ -2453,12 +2499,40 @@ export default function App() {
       )}
 
       {/* ── SIDEBAR ── */}
-      <aside style={{width:220,background:"#131720",borderRight:"1px solid #1e2535",
-        display:"flex",flexDirection:"column",padding:"24px 0",position:"sticky",top:0,
-        height:"100vh",overflowY:"auto",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 20px 24px",borderBottom:"1px solid #1e2535"}}>
-          <span style={{color:"#00d4ff",fontSize:22}}>⚡</span>
-          <span style={{fontSize:22,fontWeight:900,letterSpacing:2}}>NET<span style={{color:"#00d4ff"}}>+</span></span>
+      <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} style={{
+        width:220,
+        background:"#131720",
+        borderRight:"1px solid #1e2535",
+        display:"flex",
+        flexDirection:"column",
+        padding:"24px 0",
+        position:"sticky",
+        top:0,
+        height:"100vh",
+        overflowY:"auto",
+        flexShrink:0
+      }}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"0 20px 24px",borderBottom:"1px solid #1e2535"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{color:"#00d4ff",fontSize:22}}>⚡</span>
+            <span style={{fontSize:22,fontWeight:900,letterSpacing:2}}>NET<span style={{color:"#00d4ff"}}>+</span></span>
+          </div>
+          {/* Mobile close button */}
+          <button 
+            onClick={()=>setSidebarOpen(false)}
+            style={{
+              display:"none",
+              background:"transparent",
+              border:"none",
+              color:"#6b7280",
+              fontSize:20,
+              cursor:"pointer",
+              padding:4
+            }}
+            className="sidebar-close-btn"
+          >
+            ✕
+          </button>
         </div>
         <div style={{margin:"20px 16px 8px",background:"#1a2035",borderRadius:10,padding:"12px 16px",border:"1px solid #00d4ff33"}}>
           <div style={{fontSize:10,color:"#6b7280",letterSpacing:2}}>TOTAL XP</div>
@@ -2480,10 +2554,49 @@ export default function App() {
         <div style={{padding:"16px",borderTop:"1px solid #1e2535",fontSize:13,color:"#f59e0b",fontWeight:700}}>
           🔥 {progress.streak} day streak
         </div>
+      {/* Mobile overlay to close sidebar */}
+        {sidebarOpen && (
+          <div 
+            className="sidebar-overlay"
+            onClick={()=>setSidebarOpen(false)}
+            style={{cursor:"pointer"}}
+          />
+        )}
       </aside>
+
+      {/* Mobile overlay to close sidebar */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-overlay"
+          onClick={()=>setSidebarOpen(false)}
+          style={{cursor:"pointer"}}
+        />
+      )}
 
       {/* ── MAIN ── */}
       <main style={{flex:1,overflowY:"auto"}}>
+        {/* Mobile menu button to open sidebar */}
+        <button 
+          onClick={()=>setSidebarOpen(true)}
+          className="mobile-menu-btn"
+          style={{
+            position:"fixed",
+            top:16,
+            left:16,
+            zIndex:100,
+            background:"#1a2035",
+            border:"1px solid #00d4ff",
+            borderRadius:8,
+            color:"#00d4ff",
+            fontSize:18,
+            width:44,
+            height:44,
+            cursor:"pointer",
+            boxShadow:"0 2px 8px rgba(0,0,0,.3)"
+          }}
+        >
+          ☰
+        </button>
         <div style={{maxWidth:900,margin:"0 auto",padding:"40px 24px"}}>
 
           {screen==="dashboard" && <DashView progress={progress} pct={pct} doneLessons={doneLessons} totalLessons={totalLessons} nav={goNav}/>}
