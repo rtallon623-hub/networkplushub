@@ -55,7 +55,7 @@ npm run dev
 # or
 npm start
 
-# Access at http://localhost:5173
+# Access at http://127.0.0.1:5173
 ```
 
 ## Production Deployment (VPS)
@@ -116,10 +116,10 @@ sudo certbot --nginx -d your-domain.com
 npm install -g serve
 
 # Run production build
-serve -s dist -l 3000
+serve -s dist -l 7777
 
 # Or with PM2 for auto-restart
-pm2 serve dist 3000 --name network-plus-app
+pm2 serve dist 7777 --name network-plus-app
 pm2 save
 ```
 
