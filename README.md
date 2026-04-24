@@ -24,7 +24,7 @@ A comprehensive CompTIA Network+ N10-009 study application with lessons, flashca
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (localhost:7777)
 npm run dev
 
 # Build for production
@@ -47,101 +47,96 @@ network-plus-app/
 └── vite.config.js   # Vite configuration
 ```
 
-## Local Development
+## Server Configuration
 
-```bash
-# Development server (opens browser)
-npm run dev
-# or
-npm start
+The app runs on **port 7777** bound to `127.0.0.1` for security.
 
-# Access at http://localhost:5173
-```
+- **Development:** `http://127.0.0.1:7777`
+- **Production Preview:** `http://127.0.0.1:7777`
 
-## Production Deployment (VPS)
+## Cloudflare Tunnel Deployment
 
-### Build the App
+Designed for Cloudflare Tunnel (zero-trust) deployment.
+
+### 1. Build the App
 
 ```bash
 npm run build
 ```
 
-Output is in `dist/` folder.
+### 2. Start the Server
 
-### Deploy to VPS with Nginx
+**Option A: Using Vite preview (development)**
+```bash
+npm run dev
+```
 
-1. **Upload files:**
-   ```bash
-   scp -r dist/* user@your-vps:/var/www/your-domain.com/
-   ```
+**Option B: Using serve (production)**
+```bash
+npm install -g serve
+npm run serve
+```
 
-2. **Nginx config** (`/etc/nginx/sites-available/your-domain`):
-   ```nginx
-   server {
-       listen 80;
-       server_name your-domain.com;
-       root /var/www/your-domain.com;
-       index index.html;
+**Option C: Using PM2 (process manager)**
+```bash
+npm install -g serve
+pm2 serve dist 7777 --name network-plus-app
+pm2 save
+```
 
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
+### 3. Cloudflare Tunnel
 
-       # Cache static assets
-       location ~* \.(js|css|png|jpg|svg)$ {
-           expires 1y;
-           add_header Cache-Control "public, immutable";
-       }
-   }
-   ```
+Point your Cloudflare Tunnel to:
+```
+http://127.0.0.1:7777
+```
 
-3. **Enable and reload:**
-   ```bash
-   sudo ln -s /etc/nginx/sites-available/your-domain /etc/nginx/sites-enabled/
-   sudo nginx -t
-   sudo systemctl reload nginx
-   ```
+**Example cloudflared command:**
+```bash
+cloudflared tunnel --url http://127.0.0.1:7777
+```
 
-### HTTPS with Let's Encrypt
+## Nginx Deployment (Alternative)
+
+### 1. Upload files
+
+```bash
+scp -r dist/* user@your-vps:/var/www/your-domain.com/
+```
+
+### 2. Nginx config (`/etc/nginx/sites-available/your-domain`)
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /var/www/your-domain.com;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* \.(js|css|png|jpg|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+### 3. Enable and reload
+
+```bash
+sudo ln -s /etc/nginx/sites-available/your-domain /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### 4. HTTPS with Let's Encrypt
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com
-```
-
-### PM2 (Optional Process Manager)
-
-```bash
-# Install serve globally
-npm install -g serve
-
-# Run production build
-serve -s dist -l 3000
-
-# Or with PM2 for auto-restart
-pm2 serve dist 3000 --name network-plus-app
-pm2 save
-```
-
-### Docker Deployment
-
-```dockerfile
-FROM node:20-alpine as builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-EXPOSE 80
-```
-
-Build and run:
-```bash
-docker build -t network-plus-app .
-docker run -p 80:80 --name network-plus-app network-plus-app
 ```
 
 ## Data Storage

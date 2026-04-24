@@ -2326,6 +2326,7 @@ export default function App() {
   const [subscreen, setSubscreen] = useState(null);     // "lesson"|"quiz"|"flash"
   const [lessonIdx, setLessonIdx] = useState(null);
   const [notif, setNotif] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const startTimeRef = useRef(null);
 
   // ── helpers ──────────────────────────────────
@@ -2434,7 +2435,7 @@ export default function App() {
   const showFlash      = inWeeks && subscreen==="flash";
 
   return (
-    <div style={{display:"flex",minHeight:"100vh",background:"#0f1117",color:"#e2e8f0",fontFamily:"'DM Mono','Courier New',monospace"}}>
+    <div style={{display:"flex",minHeight:"100vh",minHeight:"100dvh",background:"#0f1117",color:"#e2e8f0",fontFamily:"'DM Mono','Courier New',monospace",flexDirection:"row"}}>
       <style>{`
         *{box-sizing:border-box;} body{margin:0;}
         @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -2453,34 +2454,68 @@ export default function App() {
       )}
 
       {/* ── SIDEBAR ── */}
-      <aside style={{width:220,background:"#131720",borderRight:"1px solid #1e2535",
-        display:"flex",flexDirection:"column",padding:"24px 0",position:"sticky",top:0,
-        height:"100vh",overflowY:"auto",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 20px 24px",borderBottom:"1px solid #1e2535"}}>
-          <span style={{color:"#00d4ff",fontSize:22}}>⚡</span>
-          <span style={{fontSize:22,fontWeight:900,letterSpacing:2}}>NET<span style={{color:"#00d4ff"}}>+</span></span>
-        </div>
-        <div style={{margin:"20px 16px 8px",background:"#1a2035",borderRadius:10,padding:"12px 16px",border:"1px solid #00d4ff33"}}>
-          <div style={{fontSize:10,color:"#6b7280",letterSpacing:2}}>TOTAL XP</div>
-          <div style={{fontSize:26,fontWeight:900,color:"#00d4ff",lineHeight:1.2}}>{progress.xp.toLocaleString()}</div>
-        </div>
-        <nav style={{display:"flex",flexDirection:"column",gap:4,padding:"16px 12px",flex:1}}>
-          {[["dashboard","🏠","Dashboard"],["weeks","📚","Course"],["flashcards","🃏","Flashcards"],
-            ["subnet","🧮","Subnet Lab"],["badges","🎖️","Medals"]
-          ].map(([id,icon,lbl])=>(
-            <button key={id} onClick={()=>goNav(id)}
-              style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,
-                border:"none",background:screen===id?"#1a2035":"transparent",
-                color:screen===id?"#00d4ff":"#6b7280",fontSize:14,textAlign:"left",
-                borderLeft:screen===id?"2px solid #00d4ff":"2px solid transparent"}}>
-              <span>{icon}</span><span>{lbl}</span>
-            </button>
-          ))}
-        </nav>
-        <div style={{padding:"16px",borderTop:"1px solid #1e2535",fontSize:13,color:"#f59e0b",fontWeight:700}}>
-          🔥 {progress.streak} day streak
-        </div>
+      <aside style={{
+        width: sidebarOpen ? 220 : 0,
+        background:"#131720",
+        borderRight: sidebarOpen ? "1px solid #1e2535" : "none",
+        display:"flex",
+        flexDirection:"column",
+        padding: sidebarOpen ? "24px 0" : 0,
+        position:"sticky",
+        top:0,
+        height:"100vh",
+        overflowY:"auto",
+        overflowX:"hidden",
+        flexShrink:0,
+        transition:"width 0.25s ease, padding 0.25s ease",
+      }}>
+        {sidebarOpen && (
+          <>
+            <div style={{display:"flex",alignItems:"center",gap:10,padding:"0 20px 24px",borderBottom:"1px solid #1e2535"}}>
+              <span style={{color:"#00d4ff",fontSize:22}}>⚡</span>
+              <span style={{fontSize:22,fontWeight:900,letterSpacing:2}}>NET<span style={{color:"#00d4ff"}}>+</span></span>
+            </div>
+            <div style={{margin:"20px 16px 8px",background:"#1a2035",borderRadius:10,padding:"12px 16px",border:"1px solid #00d4ff33"}}>
+              <div style={{fontSize:10,color:"#6b7280",letterSpacing:2}}>TOTAL XP</div>
+              <div style={{fontSize:26,fontWeight:900,color:"#00d4ff",lineHeight:1.2}}>{progress.xp.toLocaleString()}</div>
+            </div>
+            <nav style={{display:"flex",flexDirection:"column",gap:4,padding:"16px 12px",flex:1}}>
+              {[["dashboard","🏠","Dashboard"],["weeks","📚","Course"],["flashcards","🃏","Flashcards"],
+                ["subnet","🧮","Subnet Lab"],["badges","🎖️","Medals"]
+              ].map(([id,icon,lbl])=>(
+                <button key={id} onClick={()=>goNav(id)}
+                  style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,
+                    border:"none",background:screen===id?"#1a2035":"transparent",
+                    color:screen===id?"#00d4ff":"#6b7280",fontSize:14,textAlign:"left",
+                    borderLeft:screen===id?"2px solid #00d4ff":"2px solid transparent"}}>
+                  <span>{icon}</span><span>{lbl}</span>
+                </button>
+              ))}
+            </nav>
+            <div style={{padding:"16px",borderTop:"1px solid #1e2535",fontSize:13,color:"#f59e0b",fontWeight:700}}>
+              🔥 {progress.streak} day streak
+            </div>
+          </>
+        )}
       </aside>
+
+      {/* ── SIDEBAR TOGGLE ── */}
+      <button onClick={()=>setSidebarOpen(o=>!o)} style={{
+        position:"fixed",
+        top:16,
+        left: sidebarOpen ? 224 : 16,
+        zIndex:1000,
+        background:"#1a2035",
+        border:"1px solid #00d4ff33",
+        borderRadius:8,
+        padding:"8px 12px",
+        color:"#00d4ff",
+        fontSize:14,
+        cursor:"pointer",
+        transition:"left 0.25s ease",
+      }}>
+        {sidebarOpen ? "◀" : "▶"}
+      </button>
 
       {/* ── MAIN ── */}
       <main style={{flex:1,overflowY:"auto"}}>
